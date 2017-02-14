@@ -55,7 +55,6 @@
 % addPitchLabel(MGDSNode): adds pitch label to any mgds structure
 % importGDS: creates a macro to import a GDS
 % makeBinaryOpMacro(mgdsStructure1, mgdsStructure2, cBinaryOp)
-% * think about updating batch macro
 
 
 
@@ -64,7 +63,6 @@ classdef MGDS < MGDSSuper
     properties
         sStructures = struct;
         sMacroList = struct;
-        ceBatchMacroList = {}; % A list for generating all macros
         
     end
     
@@ -76,7 +74,7 @@ classdef MGDS < MGDSSuper
         
         function init(this, cName, varargin)
             this.clearStructures();
-            this.clearSessionMacros();
+            this.clearMacros();
             this.cName = cName;
             
             for k = 1:length(varargin)
@@ -122,18 +120,14 @@ classdef MGDS < MGDSSuper
             this.sStructures = struct;
         end
         
-        function clearSessionMacros(this)
+
+        function clearMacros(this)
             this.sMacroList = struct;
-        end
-        
-        function clearAllMacros(this)
-            this.sMacroList = struct;
-            this.ceBatchMacroList = {};
         end
         
         function clearAll(this)
             this.clearStructures();
-            this.clearAllMacros();
+            this.clearMacros();
         end
         
         
@@ -154,11 +148,7 @@ classdef MGDS < MGDSSuper
                 fprintf('Creating macro file for %d instructions\n', length(fieldnames(this.sMacroList)));
                 cMacroName = sprintf('%s_macro', this.cName);
                 this.renderMacro(cMacroName);
-                
-                % Register macro into global macro list:
-                if ~this.hasBatchMacro(cMacroName)
-                    this.ceBatchMacroList(end + 1, 1:2) = {gdsName, cMacroName};
-                end
+
             end
             
             this.render(gdtName);
@@ -167,26 +157,8 @@ classdef MGDS < MGDSSuper
    
         end
         
-        % Makes a macro to run all macros on list
-        function makeBatchMacro(this)
-            if ~isempty(this.ceBatchMacroList)
-                fprintf('Making batch macro to exec %d macros\n', length(this.ceBatchMacroList(:,1)));
-            end
-            
-            this.renderBatchMacro();
-            
-        end
         
-        function listBatchMacros(this)
-            if ~isempty(this.ceBatchMacroList)
-                fprintf('Batch macro list:\n');
-                for k = 1:size(this.ceBatchMacroList, 1)
-                    fprintf('%s\n', this.ceBatchMacroList{k,2});
-                    
-                end
-                
-            end
-        end
+        
         
         function mgdsStruct = makeStructure(this, mName)
             % check Max char len:
@@ -649,10 +621,6 @@ classdef MGDS < MGDSSuper
             bContainsStruct =  any(strcmp(this.getStructureNames, cStructName));
         end
         
-        function bContainsBatchMacro = hasBatchMacro(this, cMacroName)
-            bContainsBatchMacro = ~isempty(this.ceBatchMacroList) && any(strcmp(this.ceBatchMacroList(:,2), cMacroName));
-        end
-        
         
         function attachChild(this, mgdsNode)
             switch mgdsNode.cType
@@ -722,25 +690,6 @@ classdef MGDS < MGDSSuper
             end
             
         end
-        
-        function renderBatchMacro(this)
-            macroName = 'Run_Batch_Macro';
-            fid = fopen(macroName, 'w');
-            fprintf(fid, '#!/usr/bin/layout\n#name=Macro: %s\n#help=Recorded Mon Jan 23 2017\n\n', macroName);
-            fprintf(fid, 'int main(){\n');
-            for k = 1:length(this.ceBatchMacroList(:,1))
-                fprintf(fid, MGDS.makeOpenAndRunMacro(this.ceBatchMacroList{k,1}, this.ceBatchMacroList{k,2}));
-            end
-            fprintf(fid, '}');
-            if this.bKeepMacros
-                copyfile(macroName, '/Applications/layout.app/macros/');
-            else
-                movefile(macroName, '/Applications/layout.app/macros/');
-            end
-            
-            fprintf('Rendered batch macro "%s" with %d macros\n', macroName, length(this.ceBatchMacroList(:,1)));
-        end
-        
         
         
         

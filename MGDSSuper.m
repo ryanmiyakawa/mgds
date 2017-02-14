@@ -7,7 +7,7 @@ classdef MGDSSuper < handle
         dLayer = 1
         bDeleteFlag = true;
         cDbflag = 'nm';
-        bAutogenStructures = false;
+        bAutogenStructures = true;
         bKeepMacros = false;
         bGratingLabelsOff = false; 
         dMaxStructureLen = 32;
