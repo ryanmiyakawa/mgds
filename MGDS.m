@@ -5,6 +5,8 @@
 % file at the end.  Uses gdt2gds.Darwin as file generation engine.
 %
 % Instantiate a MGDS instance and use methods: 
+%
+% init(cName, varargin): Initializes MGDS with project name and properties
 % 
 % makeGDS(): Renders current MGDS structure to GDS
 %
@@ -28,6 +30,11 @@
 %
 % makeRefFromXLS(cXLSName, cHomeStructureName):  Creates reference cells as
 % described in an XLS file.  See Template.xls for details
+%
+% makeCircle(this, cHomeStructureName, dRadius, dOffset, dNPoints, dLayer):
+% creates a circular boundary.  Origin is referenced to center of circle
+%
+% makeEllipse(this, cHomeStructureName, dSemiAxes, dOffset, dNPoints, dLayer)
 %
 % makeRect(cHomeStructureName, dLen, dHeight, mBLCoord, dLayer): Creates a
 % rectangular boundary.  MBLCOORD is the BL origin coordinate, or can be
@@ -277,7 +284,11 @@ classdef MGDS < MGDSSuper
         
         % Creates references from XLS template. See refFromXLSTemplate.xlsx
         % for details
-        function mgdsRef = makeRefFromXLS(this, cXLSName, cHomeStructureName)
+        function mgdsRef = makeRefFromXLS(this, cXLSName, cHomeStructureName, dAng)
+            if exist('dAng', 'var') ~= 1
+                dAng = 0;
+            end
+            
             mData = xlsread(cXLSName, cHomeStructureName, 'B2:B7');
             % Make search range:
             dNx = mData(1);
@@ -298,7 +309,7 @@ classdef MGDS < MGDSSuper
                     
                     % Invert rows and Y:
                     dPos = [(m - 1)*dTx + dOriginX, (dNy - k)*dTy + dOriginY];
-                    mgdsRef = makeRef(this, cHomeStructureName, ceFieldLayout{k,m}, dPos);
+                    mgdsRef = makeRef(this, cHomeStructureName, ceFieldLayout{k,m}, dPos, dAng);
                     fprintf('Making reference at location [%d, %d] for field %s\n', dPos(1), dPos(2),ceFieldLayout{k,m}); 
                 end
             end
@@ -334,6 +345,32 @@ classdef MGDS < MGDSSuper
                 dLayer = this.dLayer;
             end
             mgdsShape = this.makeShape(cHomeStructureName, X, Y, dLayer);
+        end
+        
+        % Circle: for centered about origin use mBLCoord = 'center'
+        function mgdsShape = makeCircle(this, cHomeStructureName, dRadius, dOffset, dNPoints, dLayer)
+            dTh = linspace(0, 2*pi, dNPoints);
+            
+            dX = dRadius*cos(dTh) + dOffset(1);
+            dY = dRadius*sin(dTh) + dOffset(2);
+            
+            if exist('dLayer', 'var') ~= 1
+                dLayer = this.dLayer;
+            end
+            mgdsShape = this.makeShape(cHomeStructureName, dX, dY, dLayer);
+        end
+        
+        % Circle: for centered about origin use mBLCoord = 'center'
+        function mgdsShape = makeEllipse(this, cHomeStructureName, dSemiAxes, dOffset, dNPoints, dLayer)
+            dTh = linspace(0, 2*pi, dNPoints);
+            
+            dX = dSemiAxes(1)*cos(dTh) + dOffset(1);
+            dY = dSemiAxes(2)*sin(dTh) + dOffset(2);
+            
+            if exist('dLayer', 'var') ~= 1
+                dLayer = this.dLayer;
+            end
+            mgdsShape = this.makeShape(cHomeStructureName, dX, dY, dLayer);
         end
         
         function mgdsNode = makePolygonText(this, cHomeStructureName, ...
