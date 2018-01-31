@@ -31,10 +31,10 @@
 % makeRefFromXLS(cXLSName, cHomeStructureName):  Creates reference cells as
 % described in an XLS file.  See Template.xls for details
 %
-% makeCircle(this, cHomeStructureName, dRadius, dOffset, dNPoints, dLayer):
+% makeCircle(cHomeStructureName, dRadius, dOffset, dNPoints, dLayer):
 % creates a circular boundary.  Origin is referenced to center of circle
 %
-% makeEllipse(this, cHomeStructureName, dSemiAxes, dOffset, dNPoints, dLayer)
+% makeEllipse(cHomeStructureName, dSemiAxes, dOffset, dNPoints, dLayer)
 %
 % makeRect(cHomeStructureName, dLen, dHeight, mBLCoord, dLayer): Creates a
 % rectangular boundary.  MBLCOORD is the BL origin coordinate, or can be
@@ -50,6 +50,10 @@
 % makeBoundedGrating(this, cHomeStructureName, dPitch, dDC, dLen, dHeight, dAng,
 % mBLCoord, bAddPitchLabel, dLayer): Makes a 1D grating bounded by a
 % rectangle.  BADDPITCHLABEL labels pitch and angle of the grating.  
+%
+% scheduleBinaryOperation(cHomeStructureName, cStructureA, cStructureB, cBinaryOperation)
+% Schedules a layout editor macro on two structures.  CBINARYOPERATION can
+% be AND, OR, or XOR.
 %
 % TODO:
 % addPitchLabel(MGDSNode): adds pitch label to any mgds structure
@@ -114,6 +118,19 @@ classdef MGDS < MGDSSuper
             
             fprintf('Imported %d structures and %d macros from MGDS object %s\n', ...
                 length(cStructureNames2), length(cMacroNames2), oMGDS2.cName);
+        end
+        
+        % Imports structures from a GDS file
+        function importGDS(this, cGDSPath)
+            if exist('cGDSPath', 'var') ~= 1
+                [p, d] = uigetfile();
+                cGDSPath = [d p];
+            end
+            
+            [~, p, ~] = fileparts(cGDSPath);
+            cMacroName = sprintf('%s_import', p);
+            this.sMacroList.(cMacroName) = MGDS.importMacro(cGDSPath);
+            
         end
         
         function clearStructures(this)
@@ -222,8 +239,9 @@ classdef MGDS < MGDSSuper
             end
             
             if ~this.hasStructure(cTargetStructureName)
-                error ('Cannot create ref: Invalid target structure name %s\n', cTargetStructureName);
+                warning ('Cannot create ref: Invalid target structure name %s\n', cTargetStructureName);
             end
+            
             mgdsRef = MGDSRef(this.sStructures.(cTargetStructureName), dPositions, dAng);
             this.bindToStructure(cHomeStructureName, mgdsRef);
         end
@@ -360,6 +378,21 @@ classdef MGDS < MGDSSuper
             end
         end
         
+        function scheduleBinaryOperation(this, cHomeStructureName, cStructureA, cStructureB, cBinaryOperation)
+            
+            if ~this.hasStructure(cHomeStructureName)
+                if this.bAutogenStructures
+                    this.makeStructure(cHomeStructureName);
+                else
+                    error('Structure %s does not exist!  Turn on "Autogen Structures" if you would like structures to be automatically created', cHomeStructureName);
+                end
+                
+            end
+            
+            this.sMacroList.(sprintf('%s_binaryOp', cHomeStructureName)) = ...
+                MGDS.flattenAndBinaryOp(cHomeStructureName, cStructureA, cStructureB, cBinaryOperation);
+        end
+        
         function mgdsNode = makeHGrating(this, cHomeStructureName, dPitch, dDC, dLen, dHeight, mBLCoord, dLayer)
             if exist('dLayer', 'var') ~= 1
                 dLayer = this.dLayer;
@@ -407,17 +440,24 @@ classdef MGDS < MGDSSuper
                 dPitch, dDC, dLen, dHeight, dAng, mBLCoord, ...
                 bAddPitchLabel, dLayer)
             
+            % Put grating angle into [0, pi)
+            dAng = mod(dAng, pi);
+            
+            % See if there are pitch label options:
+            if isstruct(bAddPitchLabel)
+                dLabelMag = bAddPitchLabel.dLabelMag;
+                dLabelSize = bAddPitchLabel.dLabelSize;
+                bFlipText = bAddPitchLabel.bFlipText;
+                bAddPitchLabel = true;
+            else
+                dLabelSize = 1; % default to 1-um label size
+                dLabelMag = 1;
+                bFlipText = false;
+            end
+            
             % Check text label override:
             if this.bGratingLabelsOff
                 bAddPitchLabel = false;
-            end
-            
-            % Pass in fliptext as a bool array
-            if length(bAddPitchLabel) == 2
-                bFlipText = bAddPitchLabel(2);
-                bAddPitchLabel = bAddPitchLabel(1);
-            else
-                bFlipText = false;
             end
             
             if exist('dLayer', 'var') ~= 1
@@ -444,22 +484,22 @@ classdef MGDS < MGDSSuper
             if mod(dAng, pi) == 0 % H grating
                 mgdsNode = this.makeHGrating(cHomeStructureName, dPitch, dDC, dLen, dHeight, mBLCoord, dLayer);
                 if (bAddPitchLabel)
-                    cLabel = sprintf('%g%s', round(dPitch*1000, 1), 'H');
+                    cLabel = sprintf('%g%s', round(dPitch*1000*dLabelMag, 1), 'H');
                     this.makeRef(cHomeStructureName, ...
                         this.makePolygonText(cPitchLabelName, ...
-                        0, 0, 0, cLabel, 1, 'left', bFlipText, 3), ...
-                        [dX, dY - 1.5]);
+                        0, 0, 0, cLabel, dLabelSize, 'left', bFlipText, 3), ...
+                        [dX, dY - 1.5*dLabelSize]);
                     
                 end
             
             elseif mod(dAng, pi) == pi/2 % V grating
                 mgdsNode = this.makeVGrating(cHomeStructureName, dPitch, dDC, dLen, dHeight, mBLCoord, dLayer);
                 if (bAddPitchLabel)
-                    cLabel = sprintf('%g%s', round(dPitch*1000, 1), 'V');
+                    cLabel = sprintf('%g%s', round(dPitch*1000*dLabelMag, 1), 'V');
                     this.makeRef(cHomeStructureName, ...
                         this.makePolygonText(cPitchLabelName, ...
-                        0, 0, 0, cLabel, 1, 'left', bFlipText, 3), ...
-                        [dX, dY - 1.5]);
+                        0, 0, 0, cLabel, dLabelSize, 'left', bFlipText, 3), ...
+                        [dX, dY - 1.5*dLabelSize]);
                 end
                 
             else % non-HV grating:
@@ -480,12 +520,12 @@ classdef MGDS < MGDSSuper
                 
                 % Make grating label
                 if (bAddPitchLabel)
-                    cLabel = sprintf('%g%s', round(dPitch*1000, 1),...
-                        sprintf(' @ %gº', mod(dAng/pi*180, 180)));
+                    cLabel = sprintf('%g%s', round(dPitch*1000*dLabelMag, 1),...
+                        sprintf(' @ %gº', round(mod(dAng/pi*180, 180), 1)   ));
                     this.makeRef(cHomeStructureName, ...
                         this.makePolygonText(cPitchLabelName, ...
-                        0, 0, 0, cLabel, 1, 'left', bFlipText, 3), ...
-                        [dX + dXOffset, dY - 1.5]);
+                        0, 0, 0, cLabel, dLabelSize, 'left', bFlipText, 3), ...
+                        [dX + dXOffset, dY - 1.5*dLabelSize]);
                 end
                 % Make grating mask
                 cMaskStructureName = [cHomeStructureName '_mask'];
@@ -683,11 +723,17 @@ classdef MGDS < MGDSSuper
             end
             fprintf(fid, '}');
             
-            if this.bKeepMacros
-                copyfile(macroName, '/Applications/layout.app/macros/');
-            else
-                movefile(macroName, '/Applications/layout.app/macros/');
+            if length(macroName) < 7 || ~strcmp(macroName(end - 6:end), '.layout')
+                newMacroName = [macroName '.layout']; % add layout extension
+                movefile(macroName, newMacroName);
             end
+            
+%             if this.bKeepMacros
+%                 copyfile(macroName, '/Applications/layout.app/macros/');
+%             else
+%                 movefile(macroName, '/Applications/layout.app/macros/');
+%             end
+            
             
         end
         
@@ -707,6 +753,10 @@ classdef MGDS < MGDSSuper
                 ];
         end
         
+        function sMacroInstructions =  importMacro(cGDSPath)
+            sMacroInstructions = sprintf('layout->drawing->importFile("%s");\n', cGDSPath);
+               
+        end
         
         function sMacroInstructions = makeMaskMacro(cHomeStructureName, cMaskStructureName, dLayer)
             sMacroInstructions = [...
@@ -746,6 +796,29 @@ classdef MGDS < MGDSSuper
                 'layout->drawing->point(-5000,0);\n' ...
                 'layout->drawing->point(5000,0);\n' ...
                 'layout->drawing->mirror();\n'];
+        end
+        function sMacroInstructions = flattenAndBinaryOp(cTargetCell, cCellA, cCellB, cOperationType)
+            switch cOperationType
+                case 'XOR'
+                    cOpString = 'aExorB';
+                case 'AND'
+                    cOpString = 'aMultiB';
+                case 'OR'
+                    cOpString = 'aPlusB';
+            end
+            sMacroInstructions = [...
+                sprintf('layout->drawing->setCell("%s");\n', cCellA) ...
+                'layout->drawing->selectAll();\n' ...
+                'layout->drawing->flatAll();\n' ...
+                'layout->drawing->selectAll();\n' ...
+                'layout->booleanTool->setA();\n' ...
+                sprintf('layout->drawing->setCell("%s");\n', cCellB) ...
+                'layout->drawing->selectAll();\n' ...
+                'layout->drawing->flatAll();\n' ...
+                'layout->drawing->selectAll();\n' ...
+                'layout->booleanTool->setB();\n' ...
+                sprintf('layout->drawing->setCell("%s");\n', cTargetCell) ...
+                sprintf('layout->booleanTool->%s();\n', cOpString) ];
         end
         
         
