@@ -1,7 +1,10 @@
 function gdt2gds(gdtName, gdsName, deleteFlag)
 
-d = pwd;
-str = sprintf('gdt2gdsRM.Darwin %s/%s %s/%s', d, gdtName, d,gdsName);
+
+[cBinDir p] = fileparts(mfilename('fullpath'));
+
+cCurDir = pwd;
+str = sprintf('%s/gdt2gdsRM.Darwin %s/%s %s/%s',cBinDir, cCurDir, gdtName, cCurDir,gdsName);
 
 system(str);
 
