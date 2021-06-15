@@ -45,8 +45,8 @@
 % BFLIPTEXT can be set to do a vertical flip of text to print on wafer
 % correctly.  CJUSTIFICATION can be 'left', 'center', or 'right'
 %
-% makeHGrating(cHomeStructureName, dPitch, dDC, dLen, dHeight, mBLCoord, dLayer)
-% makeVGrating(cHomeStructureName, dPitch, dDC, dLen, dHeight, mBLCoord, dLayer)
+% makeHGrating(cHomeStructureName, dPitch, dDutyCucle, dLen, dHeight, mBLCoord, dLayer)
+% makeVGrating(cHomeStructureName, dPitch, dDutyCucle, dLen, dHeight, mBLCoord, dLayer)
 % makeBoundedGrating(this, cHomeStructureName, dPitch, dDC, dLen, dHeight, dAng,
 % mBLCoord, bAddPitchLabel, dLayer): Makes a 1D grating bounded by a
 % rectangle.  BADDPITCHLABEL labels pitch and angle of the grating.  
@@ -695,7 +695,7 @@ classdef MGDS < MGDSSuper
             fid = fopen(gdtName, 'w');
             switch this.cDbflag
                 case 'a'
-                    fprintf(fid, 'gds2{7\nm=-4713-01-01 00:00:00 a=-4713-01-01 00:00:00\nlib ''um.DB'' .0001 1e-10\n');
+                    fprintf(fid, 'gds2{7\nm=-4713-01-01 00:00:00 a=-4713-01-01 00:00:00\nlib ''noname'' 0.0001 1e-10\n');
                 case 'nm'
                     fprintf(fid, 'gds2{7\nm=-4713-01-01 00:00:00 a=-4713-01-01 00:00:00\nlib ''noname'' .001 1e-9\n');
                 case '1.25'                

@@ -64,11 +64,12 @@ classdef LEMacro < handle
             end
             fprintf(fid, '}');
             
-            if (this.bPreserveMacroLocally)
-                copyfile(this.cName, '/Applications/layout.app/macros/');
-            else
-                movefile(this.cName, '/Applications/layout.app/macros/');
-            end
+            
+%             if (this.bPreserveMacroLocally)
+%                 copyfile(this.cName, '/Applications/layout.app/macros/');
+%             else
+%                 movefile(this.cName, '/Applications/layout.app/macros/');
+%             end
             
             fprintf('Generated LEMacro %s\n', this.cName);
             fclose(fid);
