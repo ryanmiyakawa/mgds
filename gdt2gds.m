@@ -6,6 +6,7 @@ function gdt2gds(gdtName, gdsName, deleteFlag)
 cCurDir = pwd;
 str = sprintf('%s/gdt2gdsRM.Darwin %s/%s %s/%s',cBinDir, cCurDir, gdtName, cCurDir,gdsName);
 
+fprintf('Sys command: %s\n', str);
 system(str);
 
 if nargin > 2 && deleteFlag
