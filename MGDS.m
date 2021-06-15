@@ -797,6 +797,7 @@ classdef MGDS < MGDSSuper
                 'layout->drawing->point(5000,0);\n' ...
                 'layout->drawing->mirror();\n'];
         end
+        
         function sMacroInstructions = flattenAndBinaryOp(cTargetCell, cCellA, cCellB, cOperationType)
             switch cOperationType
                 case 'XOR'
