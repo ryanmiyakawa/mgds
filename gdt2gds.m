@@ -14,7 +14,7 @@ else
     return
 end
     
-binPath = fullfile(cBinDur, binName);
+binPath = fullfile(cBinDir, binName);
 gdtPath = fullfile(cCurDir, gdtName);
 gdsPath = fullfile(cCurDir, gdsName);
 
