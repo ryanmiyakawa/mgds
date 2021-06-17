@@ -8,7 +8,7 @@ cCurDir = pwd;
 if ispc
     binName = 'gdt2gds.exe ';
 elseif ismac
-    binName = 'gdt2gds.Darwin ';
+    binName = 'gdt2gdsRM.Darwin ';
 else
     fprintf('OS not recognized\n');
     return
@@ -18,7 +18,7 @@ binPath = fullfile(cBinDir, binName);
 gdtPath = fullfile(cCurDir, gdtName);
 gdsPath = fullfile(cCurDir, gdsName);
 
-str = sprintf('%s  %s  %s', fullfile(binPath, gdtPath, gdsPath));
+str = sprintf('%s %s %s', binPath, gdtPath, gdsPath);
 
 fprintf('Sys command: %s\n', str);
 system(str);
