@@ -10,15 +10,11 @@ if ispc
 elseif ismac
     binName = 'gdt2gds.Darwin';
 else
-    fprintf('OS not recognized\n');
-    return
-end
+    fprintf('OS not recobnize
     
-binPath = fullfile(cBinDur, binName);
-gdtPath = fullfile(cCurDir, gdtName);
-gdsPath = fullfile(cCurDir, gdsName);
 
-str = sprintf('%s %s %s', fullfile(binPath, gdtPath, gdsPath));
+str = sprintf('%s/gdt2gdsRM.Darwin %s/%s %s/%s',fullfile(cBinDir, cCurDir, gdtName, cCurDir,gdsName);
+str = sprintf('%s/gdt2gdsRM.Darwin %s/%s %s/%s',cBinDir, cCurDir, gdtName, cCurDir,gdsName);
 
 fprintf('Sys command: %s\n', str);
 system(str);
