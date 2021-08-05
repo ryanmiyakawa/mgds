@@ -274,9 +274,12 @@ classdef MGDS < MGDSSuper
         
         % Creates references from XLS template. See refFromXLSTemplate.xlsx
         % for details
-        function mgdsRef = makeRefFromXLS(this, cXLSName, cHomeStructureName, dAng)
+        function mgdsRef = makeRefFromXLS(this, cXLSName, cHomeStructureName, dAng, dOffset)
             if exist('dAng', 'var') ~= 1
                 dAng = 0;
+            end
+            if exist('dOffset', 'var') ~= 1
+                dOffset = [0, 0];
             end
             
             mData = xlsread(cXLSName, cHomeStructureName, 'B2:B7');
@@ -298,7 +301,7 @@ classdef MGDS < MGDSSuper
                     end
                     
                     % Invert rows and Y:
-                    dPos = [(m - 1)*dTx + dOriginX, (dNy - k)*dTy + dOriginY];
+                    dPos = [(m - 1)*dTx + dOriginX, (dNy - k)*dTy + dOriginY] + dOffset;
                     mgdsRef = makeRef(this, cHomeStructureName, ceFieldLayout{k,m}, dPos, dAng);
                     fprintf('Making reference at location [%d, %d] for field %s\n', dPos(1), dPos(2),ceFieldLayout{k,m}); 
                 end
