@@ -274,9 +274,12 @@ classdef MGDS < MGDSSuper
         
         % Creates references from XLS template. See refFromXLSTemplate.xlsx
         % for details
-        function mgdsRef = makeRefFromXLS(this, cXLSName, cHomeStructureName, dAng)
+        function mgdsRef = makeRefFromXLS(this, cXLSName, cHomeStructureName, dAng, dOffset)
             if exist('dAng', 'var') ~= 1
                 dAng = 0;
+            end
+            if exist('dOffset', 'var') ~= 1
+                dOffset = [0, 0];
             end
             
             mData = xlsread(cXLSName, cHomeStructureName, 'B2:B7');
@@ -298,13 +301,49 @@ classdef MGDS < MGDSSuper
                     end
                     
                     % Invert rows and Y:
-                    dPos = [(m - 1)*dTx + dOriginX, (dNy - k)*dTy + dOriginY];
+                    dPos = [(m - 1)*dTx + dOriginX, (dNy - k)*dTy + dOriginY] + dOffset;
                     mgdsRef = makeRef(this, cHomeStructureName, ceFieldLayout{k,m}, dPos, dAng);
                     fprintf('Making reference at location [%d, %d] for field %s\n', dPos(1), dPos(2),ceFieldLayout{k,m}); 
                 end
             end
             
         end
+        
+         % Creates references from google spreadsheet.  See
+         % 11Y2Bfj2p3_4R2WdsEfwtmYlccjspOMjKKWf0g0a4KqA for example
+        function mgdsRef = makeRefFromGSheet(this, cGID, cHomeStructureName, dAng, dOffset)
+            if exist('dAng', 'var') ~= 1
+                dAng = 0;
+            end
+            if exist('dOffset', 'var') ~= 1
+                dOffset = [0, 0];
+            end
+            
+            mData = getGSheet(cGID, cHomeStructureName);
+            % Make search range:
+            dNx = (mData{1,2});
+            dNy = (mData{2,2});
+            dOriginX = (mData{5,2});
+            dOriginY =(mData{6,2});
+            dTx = (mData{3,2});
+            dTy = (mData{4,2});
+                                    
+            ceFieldLayout = mData(8: 8+dNy-1, 5:5+dNx - 1);
+            
+            for k = 1:size(ceFieldLayout, 1)
+                for m = 1:size(ceFieldLayout, 2)
+                    if isempty(ceFieldLayout{k,m})
+                        continue
+                    end
+                    
+                    % Invert rows and Y:
+                    dPos = [(m - 1)*dTx + dOriginX, (dNy - k)*dTy + dOriginY] + dOffset;
+                    mgdsRef = makeRef(this, cHomeStructureName, ceFieldLayout{k,m}, dPos, dAng);
+                    fprintf('Making reference at location [%d, %d] for field %s\n', dPos(1), dPos(2),ceFieldLayout{k,m}); 
+                end
+            end
+        end
+        
         
         %%%% ------------- Helper functions for custom shapes ----- %%%
         function mgdsShape = makeText(this, cHomeStructureName, dCoordsX, dCoordsY, dAngle, cText, dWidth, cJustification, dLayer)
@@ -487,7 +526,7 @@ classdef MGDS < MGDSSuper
                     cLabel = sprintf('%g%s', round(dPitch*1000*dLabelMag, 1), 'H');
                     this.makeRef(cHomeStructureName, ...
                         this.makePolygonText(cPitchLabelName, ...
-                        0, 0, 0, cLabel, dLabelSize, 'left', bFlipText, 3), ...
+                        0, 0, 0, cLabel, dLabelSize, 'left', bFlipText, dLayer), ...
                         [dX, dY - 1.5*dLabelSize]);
                     
                 end
@@ -498,7 +537,7 @@ classdef MGDS < MGDSSuper
                     cLabel = sprintf('%g%s', round(dPitch*1000*dLabelMag, 1), 'V');
                     this.makeRef(cHomeStructureName, ...
                         this.makePolygonText(cPitchLabelName, ...
-                        0, 0, 0, cLabel, dLabelSize, 'left', bFlipText, 3), ...
+                        0, 0, 0, cLabel, dLabelSize, 'left', bFlipText, dLayer), ...
                         [dX, dY - 1.5*dLabelSize]);
                 end
                 
@@ -524,7 +563,7 @@ classdef MGDS < MGDSSuper
                         sprintf(' @ %gº', round(mod(dAng/pi*180, 180), 1)   ));
                     this.makeRef(cHomeStructureName, ...
                         this.makePolygonText(cPitchLabelName, ...
-                        0, 0, 0, cLabel, dLabelSize, 'left', bFlipText, 3), ...
+                        0, 0, 0, cLabel, dLabelSize, 'left', bFlipText, dLayer), ...
                         [dX + dXOffset, dY - 1.5*dLabelSize]);
                 end
                 % Make grating mask
@@ -641,7 +680,7 @@ classdef MGDS < MGDSSuper
                 this.makePolygonText(cHomeStructureName, dX, dY - 1.5, 0, ...
                     sprintf('Tx%g:Ty%g%s', round(dTx*1000, 1), round(dTy*1000, 1), ...
                     sprintf(' @ %gº', mod(dAng/pi*180, 180))),...
-                    1, 'left', bFlipText, 3);
+                    1, 'left', bFlipText, dLayer);
             end
                
             
