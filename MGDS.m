@@ -309,6 +309,42 @@ classdef MGDS < MGDSSuper
             
         end
         
+         % Creates references from google spreadsheet.  See
+         % 11Y2Bfj2p3_4R2WdsEfwtmYlccjspOMjKKWf0g0a4KqA for example
+        function mgdsRef = makeRefFromGSheet(this, cGID, cHomeStructureName, dAng, dOffset)
+            if exist('dAng', 'var') ~= 1
+                dAng = 0;
+            end
+            if exist('dOffset', 'var') ~= 1
+                dOffset = [0, 0];
+            end
+            
+            mData = getGSheet(cGID, cHomeStructureName);
+            % Make search range:
+            dNx = (mData{1,2});
+            dNy = (mData{2,2});
+            dOriginX = (mData{5,2});
+            dOriginY =(mData{6,2});
+            dTx = (mData{3,2});
+            dTy = (mData{4,2});
+                                    
+            ceFieldLayout = mData(8: 8+dNy-1, 5:5+dNx - 1);
+            
+            for k = 1:size(ceFieldLayout, 1)
+                for m = 1:size(ceFieldLayout, 2)
+                    if isempty(ceFieldLayout{k,m})
+                        continue
+                    end
+                    
+                    % Invert rows and Y:
+                    dPos = [(m - 1)*dTx + dOriginX, (dNy - k)*dTy + dOriginY] + dOffset;
+                    mgdsRef = makeRef(this, cHomeStructureName, ceFieldLayout{k,m}, dPos, dAng);
+                    fprintf('Making reference at location [%d, %d] for field %s\n', dPos(1), dPos(2),ceFieldLayout{k,m}); 
+                end
+            end
+        end
+        
+        
         %%%% ------------- Helper functions for custom shapes ----- %%%
         function mgdsShape = makeText(this, cHomeStructureName, dCoordsX, dCoordsY, dAngle, cText, dWidth, cJustification, dLayer)
             if exist('dLayer', 'var') ~= 1
