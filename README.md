@@ -2,6 +2,8 @@
 **Author:** R Miyakawa  
 **Date:** 01/2017
 
+This is an MPM package and is intended for use in MPM (https://github.com/ryanmiyakawa/mpm).  Using this class directly without its dependencies may not have all of its functionallity enabled.
+
 This class is designed to mimic the hierarchical structure of the GDS file. Each component can be created separately and programmatically, culminating in the rendering of the GDS file at the end. The file generation engine in use is `gdt2gds.Darwin` (64-bit OSX) or `gdt2gds.exe` (64-bit Win).
 
 ## How to Use
