@@ -320,16 +320,15 @@ classdef MGDS < MGDSSuper
             end
             
             mData = getGSheet(cGID, dSheetID);
-            
             % Make search range:
-            dNx         = str2double(mData{2,2});
-            dNy         = str2double(mData{3,2});
-            dOriginX    = str2double(mData{6,2});
-            dOriginY    = str2double(mData{7,2});
-            dTx         = str2double(mData{4,2});
-            dTy         = str2double(mData{5,2});
+            dNx = str2double(mData{2,2});
+            dNy = str2double(mData{3,2});
+            dOriginX = str2double(mData{6,2});
+            dOriginY = str2double(mData{7,2});
+            dTx = str2double(mData{4,2});
+            dTy = str2double(mData{5,2});
                                     
-            ceFieldLayout = mData(10: 10+dNy-1, 3:3+dNx - 1);
+            ceFieldLayout = mData(9: 9+dNy-1, 4:4+dNx - 1);
             
             for k = 1:size(ceFieldLayout, 1)
                 for m = 1:size(ceFieldLayout, 2)
