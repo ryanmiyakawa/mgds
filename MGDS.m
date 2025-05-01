@@ -120,8 +120,9 @@ classdef MGDS < MGDSSuper
                 length(cStructureNames2), length(cMacroNames2), oMGDS2.cName);
         end
         
+        
         % Imports structures from a GDS file
-        function importGDS(this, cGDSPath)
+        function importGDS(this, cGDSPath, ceStructureList)
             if exist('cGDSPath', 'var') ~= 1
                 [p, d] = uigetfile();
                 cGDSPath = [d p];
@@ -129,7 +130,11 @@ classdef MGDS < MGDSSuper
             
             [~, p, ~] = fileparts(cGDSPath);
             cMacroName = sprintf('%s_import', p);
-            this.sMacroList.(cMacroName) = MGDS.importMacro(cGDSPath);
+            this.sMacroList.(cMacroName) = MGDS.importMacro(cGDSPath, ceStructureList);
+            
+            % Create structure placeholders for all structures in list
+            this.makeStructure(ceStructureList);
+            
             
         end
         
@@ -239,7 +244,9 @@ classdef MGDS < MGDSSuper
             end
             
             if ~this.hasStructure(cTargetStructureName)
-                warning ('Cannot create ref: Invalid target structure name %s\n', cTargetStructureName);
+                warning ('Cannot create ref: Invalid target structure name %s, reference will not be made \n', cTargetStructureName);
+                mgdsRef = [];
+                return
             end
             
             mgdsRef = MGDSRef(this.sStructures.(cTargetStructureName), dPositions, dAng);
@@ -302,15 +309,16 @@ classdef MGDS < MGDSSuper
                     
                     % Invert rows and Y:
                     dPos = [(m - 1)*dTx + dOriginX, (dNy - k)*dTy + dOriginY] + dOffset;
-                    mgdsRef = makeRef(this, cHomeStructureName, ceFieldLayout{k,m}, dPos, dAng);
                     fprintf('Making reference at location [%d, %d] for field %s\n', dPos(1), dPos(2),ceFieldLayout{k,m}); 
+                    mgdsRef = makeRef(this, cHomeStructureName, ceFieldLayout{k,m}, dPos, dAng);
                 end
             end
             
         end
         
          % Creates references from google spreadsheet.  See
-         % 11Y2Bfj2p3_4R2WdsEfwtmYlccjspOMjKKWf0g0a4KqA for example
+         % https://docs.google.com/spreadsheets/d/1nsCwYA44dyhfpMGb0WniDc_VPJcJF1jznnSZ4sWJICU/edit?gid=1861203091#gid=1861203091
+         % For example
         function mgdsRef = makeRefFromGSheet(this, cGID, dSheetID, cHomeStructureName, dAng, dOffset)
             if exist('dAng', 'var') ~= 1
                 dAng = 0;
@@ -339,8 +347,8 @@ classdef MGDS < MGDSSuper
                     
                     % Invert rows and Y:
                     dPos = [(m - 1)*dTx + dOriginX, (dNy - k)*dTy + dOriginY] + dOffset;
+                    fprintf('Making reference at location [%d, %d] for field %s\n', dPos(1), dPos(2),ceFieldLayout{k,m});
                     mgdsRef = makeRef(this, cHomeStructureName, ceFieldLayout{k,m}, dPos, dAng);
-                    fprintf('Making reference at location [%d, %d] for field %s\n', dPos(1), dPos(2),ceFieldLayout{k,m}); 
                 end
             end
         end
@@ -472,6 +480,8 @@ classdef MGDS < MGDSSuper
             mgdsNode = this.makeARef(cHomeStructureName, mgdsAtom, ...
                               dNx, 1, dPitch, 0, dX, dY);
         end
+        
+        
         
         
         
@@ -688,6 +698,38 @@ classdef MGDS < MGDSSuper
             
         end
         
+        
+        function mgdsNode = make2DGrating(this, cHomeStructureName, dPitches, dDCs, dLen, dHeight, mBLCoord, dLayer)
+            if exist('dLayer', 'var') ~= 1
+                dLayer = this.dLayer;
+            end
+            
+            if length(dPitches) == 1
+                dPitches = dPitches * [1, 1];
+            end
+            if length(dDCs) == 1
+                dDCs = dDCs * [1, 1];
+            end
+            
+            dNx = round(dLen/dPitches(1));
+            dNy = round(dHeight/dPitches(2));
+            
+            % Make atom:
+            cAtomName = [cHomeStructureName '_atm'];
+            mgdsAtom = this.makeRect(cAtomName,  dPitches(1)*dDCs(1), dPitches(2)*dDCs(2), [0, 0], dLayer);
+            if strcmp(mBLCoord, 'center')
+                dX = -dLen/2;
+                dY = -dHeight/2;
+            else
+                dX = mBLCoord(1);
+                dY = mBLCoord(2);
+            end 
+            mgdsNode = this.makeARef(cHomeStructureName, mgdsAtom, ...
+                             dNx, dNy, dPitches(1), dPitches(2), dX, dY);
+        end
+        
+        
+        
     end
     
     %%% --- PRIVATE FUNCTIONS --- %%%
@@ -793,8 +835,34 @@ classdef MGDS < MGDSSuper
                 ];
         end
         
-        function sMacroInstructions =  importMacro(cGDSPath)
+        % Structures listed in ceStructureList will already be defined as
+        % empty structures as placeholders.  We need to rename these, then reference the
+        % nontrivial versions from the imported file
+        function sMacroInstructions =  importMacro(cGDSPath, ceStructureList)
+            sMacroInstructions = [];
+            for k = 1:length(ceStructureList)
+                cStructure = ceStructureList{k};
+                
+                % Go to the structure placeholder
+                sMacroInstructions = sprintf('%slayout->drawing->setCell("%s");\n', sMacroInstructions, cStructure);
+                % Rename it:
+                sMacroInstructions = sprintf('%slayout->drawing->currentCell->cellName="%s_ph";\n', sMacroInstructions, cStructure);
+            end
+            
+            % Now import the real structures
             sMacroInstructions = sprintf('layout->drawing->importFile("%s");\n', cGDSPath);
+            
+            % Then loop back and place a reference to the true structures
+            % from the placeholders:
+            for k = 1:length(ceStructureList)
+                cStructure = ceStructureList{k};
+                
+                % Go to the structure placeholder
+                sMacroInstructions = sprintf('%slayout->drawing->setCell("%s_ph");\n', sMacroInstructions, cStructure);
+                sMacroInstructions = sprintf('%slayout->drawing->point(0,0);\n', sMacroInstructions);
+                sMacroInstructions = sprintf('%slayout->drawing>cellref("%s");\n', sMacroInstructions, cStructure);
+            end
+            
                
         end
         
