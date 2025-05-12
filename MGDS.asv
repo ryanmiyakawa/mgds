@@ -253,7 +253,7 @@ classdef MGDS < MGDSSuper
                 dAng = 0;
             end
             
-            if ~this.hasStructure(cTargetStructureName) && ~strcmp(cTargetStructureName, 'empty')
+            if ~this.hasStructure(cTargetStructureName) && cTargetStru
                 warning ('Cannot create ref: Invalid target structure name %s, reference will not be made \n', cTargetStructureName);
                 mgdsRef = [];
                 return
